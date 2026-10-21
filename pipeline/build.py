@@ -1,8 +1,9 @@
-"""Stage 4 — emit the frontend data.
+"""Stage 5 — emit the frontend data.
 
 - data/structures.geojson — every RPS row as a point with all its fields
   (full record, for reuse elsewhere).
 - web/data/structures.json — slim rows for the map: short keys, no long text.
+- web/data/zones.geojson — simplified Z2 / Z8 conservation zones for the map.
 - web/data/details/<n>.json — the long NIAH text and photo, keyed by RPS row
   key and split into SHARDS files by RPS ID, so the map loads fast and opening
   a card fetches ~250 KB rather than all of it.
@@ -18,14 +19,15 @@ from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-IN_PATH = ROOT / "data" / "enriched.json"
+IN_PATH = ROOT / "data" / "zoned.json"
+ZONES_PATH = ROOT / "data" / "zones_simplified.geojson"
 GEOJSON_PATH = ROOT / "data" / "structures.geojson"
 WEB_DIR = ROOT / "web" / "data"
 SHARDS = 40
 
 
 def run() -> None:
-    print("Stage 4: building frontend data")
+    print("Stage 5: building frontend data")
     rows = json.loads(IN_PATH.read_text(encoding="utf-8"))
     parts = Counter(r["rps_id"] for r in rows)
 
@@ -46,6 +48,7 @@ def run() -> None:
             "pc": r["postcode"],
             "d": r["description"],
             "ll": [r["lon"], r["lat"]],
+            **({"z": r["zone"]} if r["zone"] else {}),
             **({"y": built_year(n), "t": n["original_type"], "r": n["rating"], "p": 1 if n["image"] else 0}
                if n else {}),
         })
@@ -59,6 +62,8 @@ def run() -> None:
     WEB_DIR.mkdir(parents=True, exist_ok=True)
     compact = {"ensure_ascii": False, "separators": (",", ":")}
     (WEB_DIR / "structures.json").write_text(json.dumps(slim, **compact), encoding="utf-8")
+    (WEB_DIR / "zones.geojson").write_bytes(ZONES_PATH.read_bytes())
+
     shards: dict[int, dict] = {}
     for key, d in details.items():
         shards.setdefault(shard_of(key), {})[key] = d
@@ -68,7 +73,7 @@ def run() -> None:
         old.unlink()
     for n, part in shards.items():
         (shard_dir / f"{n}.json").write_text(json.dumps(part, **compact), encoding="utf-8")
-    for p in (GEOJSON_PATH, WEB_DIR / "structures.json"):
+    for p in (GEOJSON_PATH, WEB_DIR / "structures.json", WEB_DIR / "zones.geojson"):
         print(f"  {p.relative_to(ROOT)}  {p.stat().st_size / 1e6:.1f} MB")
     print(f"  {shard_dir.relative_to(ROOT)}/  {len(shards)} shards, "
           f"{sum(f.stat().st_size for f in shard_dir.glob('*.json')) / 1e6:.1f} MB total")

@@ -27,7 +27,7 @@
 
       <label class="search-label" for="search">Is my house protected?</label>
       <div class="search-row">
-        <input id="search" type="search" placeholder="Address, e.g. 5 Mountjoy Sq"
+        <input id="search" type="search" placeholder="e.g. 5 Mountjoy Sq"
                autocomplete="off" />
         <button id="filter-toggle" type="button" aria-expanded="false" aria-controls="filter-panel"
                 aria-label="Filters" title="Filters">
@@ -51,6 +51,8 @@
               <input type="checkbox" id="photo-only" role="switch" /></label>
             <label class="switch-row"><span>National importance <span id="national-count" class="count">0</span></span>
               <input type="checkbox" id="national-only" role="switch" /></label>
+            <label class="switch-row"><span>Conservation zones</span>
+              <input type="checkbox" id="show-zones" role="switch" checked /></label>
           </div>
         </div>
       </div>
@@ -61,6 +63,15 @@
 
     <div id="list-divider"></div>
     <ul id="results" class="scrollbar-subtle" aria-label="Protected structures"></ul>
+  </aside>
+
+  <!-- Key for the shaded conservation zones; "What's this?" explains them -->
+  <aside id="zone-legend" aria-label="Conservation zones">
+    <div class="legend-rows"></div>
+    <button class="legend-more" type="button" aria-expanded="false">What's this?</button>
+    <p class="legend-text">Shaded areas are conservation zones in the Dublin City Development Plan
+      2022–2028. A building there isn't protected unless it's on the Record, but the council expects
+      changes to respect the area's character. Architectural Conservation Areas aren't shown.</p>
   </aside>
 
   <!-- Building detail card, filled in by openDetail() in app.js -->

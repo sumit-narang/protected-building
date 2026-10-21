@@ -5,7 +5,8 @@ Stages:
   1. fetch     — download DCC's Record of Protected Structures (CSV)
   2. normalize — repair street numbers, convert Irish Grid -> WGS84
   3. niah      — match rows to NIAH records (dates, description, photo)
-  4. build     — emit data/structures.geojson + web/data/*.json
+  4. zones     — tag rows with conservation zones Z2 / Z8
+  5. build     — emit data/structures.geojson + web/data/*
 
 Usage:
   python3 run_pipeline.py                  # full run
@@ -18,9 +19,9 @@ from __future__ import annotations
 
 import sys
 
-from pipeline import build, fetch, niah, normalize
+from pipeline import build, fetch, niah, normalize, zones
 
-STAGES = ["fetch", "normalize", "niah", "build"]
+STAGES = ["fetch", "normalize", "niah", "zones", "build"]
 
 
 def main(argv: list[str]) -> int:
@@ -40,6 +41,8 @@ def main(argv: list[str]) -> int:
         normalize.run()
     if "niah" in active:
         niah.run()
+    if "zones" in active:
+        zones.run()
     if "build" in active:
         build.run()
 

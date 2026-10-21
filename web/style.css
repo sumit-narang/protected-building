@@ -616,3 +616,54 @@ html, body {
   font-weight: 600;
   cursor: pointer;
 }
+
+/* Conservation zones: swatches, "No" answer line, legend at the bottom of the map */
+.zone-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 3px;
+  opacity: 0.7;
+  vertical-align: -1px;
+}
+.verdict-zone { margin: 6px 0 0; font-size: 12px; line-height: 17px; color: var(--ink-3); }
+
+#zone-legend {
+  position: absolute;
+  left: calc(12px + 18rem + 12px);
+  bottom: 28px;
+  z-index: 4;
+  max-width: 300px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--glass);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  font-size: 12px;
+  color: var(--ink-3);
+}
+#zone-legend[hidden] { display: none; }
+#zone-legend .legend-rows { display: flex; flex-direction: column; gap: 4px; }
+#zone-legend .legend-more {
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--blue);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+#zone-legend .legend-text { display: none; margin: 6px 0 0; font-size: 11px; line-height: 15px; color: var(--muted-ink); }
+#zone-legend.open .legend-text { display: block; }
+#zone-legend.open .legend-more { display: none; }
+
+@media (max-width: 767px) {
+  /* The bottom sheet owns the bottom of the screen; sit the key top-left. */
+  #zone-legend { left: 12px; top: 12px; bottom: auto; max-width: calc(100vw - 80px); }
+  body.detail-open #zone-legend { display: none; }
+}

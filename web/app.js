@@ -19,6 +19,14 @@ const ERAS = [
 ];
 const ERA_BY_ID = Object.fromEntries(ERAS.map((e) => [e.id, e]));
 
+// Development Plan conservation zones (pipeline/zones.py). Not the same as
+// protection: they shape how the council judges changes to an area.
+const ZONES = {
+  Z2: { label: "Residential Conservation Area", color: "#d97706" },
+  Z8: { label: "Georgian Conservation Area", color: "#7c3aed" },
+};
+const ZONES_URL = "data/zones.geojson";
+
 function eraOf(year) {
   if (!year) return "unknown";
   return ERAS.find((e) => e.max != null && year <= e.max).id;
@@ -33,6 +41,7 @@ const filters = {
   eras: new Set(ERAS.map((e) => e.id)),
   photoOnly: false,
   nationalOnly: false,
+  showZones: true,
   search: "",
 };
 
@@ -171,7 +180,7 @@ function renderVerdict(v) {
   const num = v.query.nums.join(", ");
   const streets = [...new Set(v.onStreet.map((r) => streetOf(r)))];
   const hitStreets = [...new Set(v.hits.map((r) => streetOf(r)))];
-  let cls, title, text;
+  let cls, title, text, zoneNote = "";
   if (hitStreets.length > 1) {
     // e.g. "3 Grosvenor" without saying Road, Square or Place.
     cls = "maybe";
@@ -193,6 +202,7 @@ function renderVerdict(v) {
     title = "Not on the Record";
     const where = streets.length === 1 ? escapeHtml(streets[0]) : "matching streets";
     text = `No. ${escapeHtml(num)} isn't listed, but ${v.onStreet.length} other building${v.onStreet.length === 1 ? "" : "s"} on ${where} ${v.onStreet.length === 1 ? "is" : "are"}.`;
+    zoneNote = zoneHint(v, streets);
   } else {
     cls = "none";
     title = "No match on the Record";
@@ -202,8 +212,42 @@ function renderVerdict(v) {
   el.innerHTML = `
     <p class="verdict-title">${title}</p>
     <p class="verdict-text">${text}</p>
-    <p class="verdict-note">${cls === "yes" ? "" : "Conservation areas can still limit changes and aren't checked here. "}Record dated Dec 2025 — confirm with Dublin City Council before relying on it.</p>`;
+    ${zoneNote ? `<p class="verdict-zone">${zoneNote}</p>` : ""}
+    <p class="verdict-note">${cls === "yes" ? "" : "Architectural Conservation Areas can also limit changes and aren't checked here. "}Record dated Dec 2025 — confirm with Dublin City Council before relying on it.</p>`;
   el.hidden = false;
+}
+
+// A "No" address has no point of its own, so read the zone from its nearest
+// listed neighbours on the same street: if the closest numbers either side
+// share a zone, the house almost certainly does too.
+function zoneHint(v, streets) {
+  let rows = v.onStreet;
+  if (streets.length > 1) {
+    // "Leinster Road" also matches Leinster Road West; prefer the exact name.
+    const want = [...v.query.street].sort().join(" ");
+    rows = rows.filter((r) => [...r._words].filter((w) => !/\d/.test(w)).sort().join(" ") === want);
+    if (!rows.length) return "";
+  }
+  const n = v.query.nums[0];
+  let below = null, above = null;
+  for (const r of rows) {
+    for (const m of r._nums) {
+      if (m < n && (!below || m > below.m)) below = { m, r };
+      if (m > n && (!above || m < above.m)) above = { m, r };
+    }
+  }
+  const close = [below, above].filter((x) => x && Math.abs(x.m - n) <= 10);
+  const zonesNear = new Set(close.map((x) => x.r.z || null));
+  const zone = zonesNear.size === 1 ? [...zonesNear][0] : null;
+  const sentence = (z, lead) => `${lead} a <b>${ZONES[z].label} (${z})</b>, so the council expects changes to respect the area's character.`;
+  if (zone && (close.length === 2 || Math.abs(close[0].m - n) <= 4)) {
+    return sentence(zone, "Its listed neighbours are in");
+  }
+  const streetZones = [...new Set(rows.map((r) => r.z).filter(Boolean))];
+  if (streetZones.length) {
+    return `Parts of this street are in a ${streetZones.map((z) => `<b>${ZONES[z].label} (${z})</b>`).join(" and a ")}. Check the shaded areas on the map.`;
+  }
+  return "";
 }
 
 // ---- Sidebar list ----
@@ -386,6 +430,7 @@ function detailHtml(r, d) {
         ${d?.name ? `<p class="detail-address">${escapeHtml(r.a)}</p>` : ""}
         <p class="detail-desc">On the Record as: ${escapeHtml(r.d)}</p>
         ${parts > 1 ? `<p class="detail-note">One of ${parts} parts of this protected structure.</p>` : ""}
+        ${r.z ? `<p class="detail-note"><span class="zone-swatch" style="background:${ZONES[r.z].color}"></span>In a ${ZONES[r.z].label} (${r.z})</p>` : ""}
       </div>
       ${d && (d.appraisal || d.description) ? `
         <div class="detail-section">
@@ -485,8 +530,35 @@ function updateMapData(rows) {
   else pendingRows = rows;
 }
 
+function setZonesVisible(show) {
+  document.getElementById("zone-legend").hidden = !show;
+  if (!map?.getLayer("zones-fill")) return;
+  for (const id of ["zones-fill", "zones-line"]) map.setLayoutProperty(id, "visibility", show ? "visible" : "none");
+}
+
 function initMapLayers() {
   map.on("load", () => {
+    // Conservation zones sit under the points as a faint wash.
+    map.addSource("zones", { type: "geojson", data: ZONES_URL });
+    const zoneColor = ["match", ["get", "zone"], ...Object.entries(ZONES).flatMap(([z, v]) => [z, v.color]), "#94a3b8"];
+    map.addLayer({
+      id: "zones-fill",
+      type: "fill",
+      source: "zones",
+      paint: { "fill-color": zoneColor, "fill-opacity": 0.1 },
+    });
+    map.addLayer({
+      id: "zones-line",
+      type: "line",
+      source: "zones",
+      paint: {
+        "line-color": zoneColor,
+        "line-opacity": 0.45,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.4, 16, 1.2],
+      },
+    });
+    setZonesVisible(filters.showZones);
+
     map.addSource("structures", { type: "geojson", data: toGeoJSON(pendingRows || []) });
     const radius = ["interpolate", ["linear"], ["zoom"], 11, 2, 14, 4, 17, 8];
     map.addLayer({
@@ -605,6 +677,18 @@ function buildControls() {
     });
   bind("photo-only", "photoOnly");
   bind("national-only", "nationalOnly");
+  document.getElementById("show-zones").addEventListener("change", (e) => {
+    filters.showZones = e.target.checked;
+    setZonesVisible(filters.showZones);
+  });
+
+  const legend = document.getElementById("zone-legend");
+  legend.querySelector(".legend-rows").innerHTML = Object.entries(ZONES).map(([z, v]) =>
+    `<span class="legend-row"><span class="zone-swatch" style="background:${v.color}"></span>${v.label} (${z})</span>`).join("");
+  legend.querySelector(".legend-more").addEventListener("click", () => {
+    const open = legend.classList.toggle("open");
+    legend.querySelector(".legend-more").setAttribute("aria-expanded", String(open));
+  });
 
   let t;
   document.getElementById("search").addEventListener("input", (e) => {
@@ -652,7 +736,7 @@ async function boot() {
   }
   for (const r of allRows) {
     r._era = eraOf(r.y);
-    r._street = streetOf(r).toLowerCase();
+    r._street = streetOf(r).replace(/, Dublin.*$/, "").toLowerCase();
     r._nums = houseNumbers(r.n || "");
     r._first = Math.min(...r._nums, Infinity);
     r._wordList = addressWords(streetOf(r));
