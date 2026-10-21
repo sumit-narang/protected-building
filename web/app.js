@@ -1,7 +1,7 @@
 /* Dublin Protected Structures — Mapbox GL JS frontend.
  * Reads the pipeline output (data/structures.json), draws every protected
- * structure as a point coloured by when it was built, and answers
- * "Is my house protected?" from the search box.
+ * structure as a point coloured by when it was built, with a searchable,
+ * filterable list and a detail card per building.
  */
 
 const DATA_URL = "data/structures.json";
@@ -49,7 +49,7 @@ const filters = {
   search: "",
 };
 
-// ---- Address search ("Is my house protected?") ----
+// ---- Search: street, number or description ----
 // Abbreviations are expanded so "Leeson St" finds "Leeson Street". Street
 // types are kept: Grosvenor Road and Grosvenor Square are different places.
 // "St" before a name ("St Stephen's Green") is Saint and is dropped.
@@ -104,15 +104,6 @@ function streetMatches(row, query) {
     (query.prefix && i === query.street.length - 1 && row._wordList.some((rw) => rw.startsWith(w))));
 }
 
-// Returns the verdict for an address-like query, or null for a plain search.
-function lookupAddress(q) {
-  const query = parseQuery(q);
-  if (!query.nums.length || !query.street.length) return null;
-  const onStreet = allRows.filter((r) => streetMatches(r, query));
-  const hits = onStreet.filter((r) => query.nums.some((n) => r._nums.has(n)));
-  return { query, onStreet, hits };
-}
-
 // ---- Filtering (single source of truth feeds both map + list) ----
 function matchesFilters(r) {
   if (!filters.eras.has(r._era)) return false;
@@ -140,30 +131,22 @@ function applyFilters() {
   badge.textContent = count;
 
   const raw = filters.search;
-  const verdict = raw ? lookupAddress(raw) : null;
-  let shown;
-  if (verdict) {
-    // An address answer ignores the filters: a hidden match must never read as "No".
-    shown = [...verdict.hits, ...verdict.onStreet.filter((r) => !verdict.hits.includes(r)).sort(byAddress)];
-  } else {
-    const query = parseQuery(raw);
-    shown = allRows.filter((r) => matchesFilters(r) && matchesSearch(r, query, raw));
-  }
-  renderVerdict(verdict);
+  const query = parseQuery(raw);
+  const shown = allRows.filter((r) => matchesFilters(r) && matchesSearch(r, query, raw));
   updateMapData(shown);
-  renderList(shown, Boolean(verdict));
+  renderList(shown);
   document.getElementById("stats").textContent =
     `${shown.length.toLocaleString()} shown · ${allRows.length.toLocaleString()} protected structures`;
 
-  // Once typing pauses: a single address match opens its card, otherwise
-  // zoom to fit the results.
+  // Once typing pauses: a single match opens its card, otherwise zoom to fit
+  // the results.
   clearTimeout(fitTimer);
   if (map && raw && shown.length && shown.length <= 400) {
     fitTimer = setTimeout(() => {
-      if (verdict?.hits.length === 1) {
-        if (verdict.hits[0].k !== selectedKey) openDetail(verdict.hits[0], { fly: true });
+      if (shown.length === 1) {
+        if (shown[0].k !== selectedKey) openDetail(shown[0], { fly: true });
       } else {
-        fitTo(verdict?.hits.length ? verdict.hits : shown);
+        fitTo(shown);
       }
     }, 350);
   }
@@ -173,92 +156,6 @@ function fitTo(rows) {
   const b = new mapboxgl.LngLatBounds();
   rows.forEach((r) => b.extend(r.ll));
   map.fitBounds(b, { padding: 80, maxZoom: 17, duration: 600 });
-}
-
-function renderVerdict(v) {
-  const el = document.getElementById("verdict");
-  if (!v) {
-    el.hidden = true;
-    return;
-  }
-  const num = v.query.nums.join(", ");
-  const streets = [...new Set(v.onStreet.map((r) => streetOf(r)))];
-  const hitStreets = [...new Set(v.hits.map((r) => streetOf(r)))];
-  let cls, title, text, zoneNote = "";
-  if (hitStreets.length > 1) {
-    // e.g. "3 Grosvenor" without saying Road, Square or Place.
-    cls = "maybe";
-    title = "Check which street";
-    text = `No. ${escapeHtml(num)} is protected on ${hitStreets.slice(0, 4).map((s) => `<b>${escapeHtml(s)}</b>`).join(", ")}${hitStreets.length > 4 ? "…" : ""}. Add the full street name to get one answer.`;
-  } else if (v.hits.length) {
-    cls = "yes";
-    title = "Yes, it's protected";
-    text = v.hits.length === 1
-      ? `<b>${escapeHtml(v.hits[0].a)}</b> is on Dublin City Council's Record of Protected Structures.`
-      : `${v.hits.length} entries on the Record match: ${v.hits.slice(0, 3).map((r) => `<b>${escapeHtml(r.a)}</b>`).join(", ")}${v.hits.length > 3 ? "…" : ""}`;
-    // "14 Leeson St" also matches Leeson Street Lower, where 14 isn't listed.
-    // Compare streets by their words so spelling variants ("Stephen's" vs
-    // "Stephen’s") count as one, and skip unnumbered entries (railings,
-    // monuments) and combined addresses ("24 Dawson St/13 St Stephen's Green").
-    const streetKey = (r) => [...r._words].filter((w) => !/\d/.test(w)).sort().join(" ");
-    const hitKey = streetKey(v.hits[0]);
-    const others = [...new Map(v.onStreet
-      .filter((r) => r._nums.size && !r.a.includes("/") && streetKey(r) !== hitKey)
-      .map((r) => [streetKey(r), streetOf(r)])).values()];
-    if (others.length) {
-      text += ` Not listed on ${others.slice(0, 3).map(escapeHtml).join(", ")}${others.length > 3 ? "…" : ""}.`;
-    }
-  } else if (v.onStreet.length) {
-    cls = "no";
-    title = "Not on the Record";
-    const where = streets.length === 1 ? escapeHtml(streets[0]) : "matching streets";
-    text = `No. ${escapeHtml(num)} isn't listed, but ${v.onStreet.length} other building${v.onStreet.length === 1 ? "" : "s"} on ${where} ${v.onStreet.length === 1 ? "is" : "are"}.`;
-    zoneNote = zoneHint(v, streets);
-  } else {
-    cls = "none";
-    title = "No match on the Record";
-    text = "No protected structures are listed on a street with that name. Check the spelling, or try the street name alone.";
-  }
-  el.className = `verdict ${cls}`;
-  el.innerHTML = `
-    <p class="verdict-title">${title}</p>
-    <p class="verdict-text">${text}</p>
-    ${zoneNote ? `<p class="verdict-zone">${zoneNote}</p>` : ""}
-    <p class="verdict-note">${cls === "yes" ? "" : "Architectural Conservation Areas can also limit changes and aren't checked here. "}Record dated Dec 2025 — confirm with Dublin City Council before relying on it.</p>`;
-  el.hidden = false;
-}
-
-// A "No" address has no point of its own, so read the zone from its nearest
-// listed neighbours on the same street: if the closest numbers either side
-// share a zone, the house almost certainly does too.
-function zoneHint(v, streets) {
-  let rows = v.onStreet;
-  if (streets.length > 1) {
-    // "Leinster Road" also matches Leinster Road West; prefer the exact name.
-    const want = [...v.query.street].sort().join(" ");
-    rows = rows.filter((r) => [...r._words].filter((w) => !/\d/.test(w)).sort().join(" ") === want);
-    if (!rows.length) return "";
-  }
-  const n = v.query.nums[0];
-  let below = null, above = null;
-  for (const r of rows) {
-    for (const m of r._nums) {
-      if (m < n && (!below || m > below.m)) below = { m, r };
-      if (m > n && (!above || m < above.m)) above = { m, r };
-    }
-  }
-  const close = [below, above].filter((x) => x && Math.abs(x.m - n) <= 10);
-  const zonesNear = new Set(close.map((x) => x.r.z || null));
-  const zone = zonesNear.size === 1 ? [...zonesNear][0] : null;
-  const sentence = (z, lead) => `${lead} a <b>${ZONES[z].label} (${z})</b>, so the council expects changes to respect the area's character.`;
-  if (zone && (close.length === 2 || Math.abs(close[0].m - n) <= 4)) {
-    return sentence(zone, "Its listed neighbours are in");
-  }
-  const streetZones = [...new Set(rows.map((r) => r.z).filter(Boolean))];
-  if (streetZones.length) {
-    return `Parts of this street are in a ${streetZones.map((z) => `<b>${ZONES[z].label} (${z})</b>`).join(" and a ")}. Check the shaded areas on the map.`;
-  }
-  return "";
 }
 
 // ---- Sidebar list ----
@@ -313,8 +210,8 @@ function appendPage(count = PAGE_SIZE) {
   }
 }
 
-function renderList(rows, keepOrder) {
-  listRows = keepOrder ? rows : [...rows].sort(byAddress);
+function renderList(rows) {
+  listRows = [...rows].sort(byAddress);
   listRendered = 0;
   document.getElementById("results").innerHTML = "";
   document.getElementById("results").scrollTop = 0;

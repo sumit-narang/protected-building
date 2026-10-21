@@ -6,8 +6,8 @@ conservation:
        of residential conservation areas")
   Z8 — Georgian Conservation Area
 Being in one does not make a building protected, but the council expects
-changes there to respect the area's character. "Is my house protected?" uses
-the zone to soften a plain "No".
+changes there to respect the area's character. The map shades the zones and
+each building's card names the zone it sits in.
 
 The GeoJSON is already WGS84 (unlike the RPS GeoJSON). We tag each row by
 point-in-polygon and write a simplified copy (about 1 m tolerance) for the map.
