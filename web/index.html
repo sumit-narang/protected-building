@@ -65,13 +65,17 @@
     <ul id="results" class="scrollbar-subtle" aria-label="Protected structures"></ul>
   </aside>
 
-  <!-- Key for the shaded conservation zones; "What's this?" explains them -->
-  <aside id="zone-legend" aria-label="Conservation zones">
-    <div class="legend-rows"></div>
-    <button class="legend-more" type="button" aria-expanded="false">What's this?</button>
-    <p class="legend-text">Shaded areas are conservation zones in the Dublin City Development Plan
-      2022–2028. A building there isn't protected unless it's on the Record, but the council expects
-      changes to respect the area's character. Architectural Conservation Areas aren't shown.</p>
+  <!-- Map key: shaded conservation zones ("What's this?" explains them), then
+       the dot colours by build date. -->
+  <aside id="map-legend" aria-label="Map key">
+    <div class="legend-zones">
+      <div class="legend-rows"></div>
+      <button class="legend-more" type="button" aria-expanded="false">What's this?</button>
+      <p class="legend-text">Shaded areas are conservation zones in the Dublin City Development Plan
+        2022–2028. A building there isn't protected unless it's on the Record, but the council expects
+        changes to respect the area's character. Architectural Conservation Areas aren't shown.</p>
+    </div>
+    <div class="legend-eras" aria-label="Built"></div>
   </aside>
 
   <!-- Building detail card, filled in by openDetail() in app.js -->

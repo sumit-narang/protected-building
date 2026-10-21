@@ -9,12 +9,16 @@ const DETAIL_SHARDS = 40;  // matches SHARDS in pipeline/build.py
 const RPS_SOURCE_URL = "https://data.smartdublin.ie/dataset/record-protected-structures-dcc";
 
 // Build date comes from the NIAH survey; rows it hasn't covered are "unknown".
+// Bright colours for the light basemap, checked with the dataviz palette
+// validator against its land colour (#f7f7f8): any two eras stay distinct
+// with normal colour vision. Gold and orchid are ~2.5-2.7:1 to stay bright,
+// relieved by the list and card showing the exact date.
 const ERAS = [
-  { id: "pre1750", label: "Before 1750", color: "#b45309", max: 1749 },
-  { id: "1750", label: "1750–1799", color: "#2563eb", max: 1799 },
-  { id: "1800", label: "1800–1849", color: "#0d9488", max: 1849 },
-  { id: "1850", label: "1850–1899", color: "#c026d3", max: 1899 },
-  { id: "1900", label: "1900 on", color: "#dc2626", max: Infinity },
+  { id: "pre1750", label: "Before 1750", color: "#d19200", max: 1749 },
+  { id: "1750", label: "1750–1799", color: "#0073f8", max: 1799 },
+  { id: "1800", label: "1800–1849", color: "#009a74", max: 1849 },
+  { id: "1850", label: "1850–1899", color: "#cc70f2", max: 1899 },
+  { id: "1900", label: "1900 on", color: "#df202e", max: Infinity },
   { id: "unknown", label: "Date unknown", color: "#94a3b8" },
 ];
 const ERA_BY_ID = Object.fromEntries(ERAS.map((e) => [e.id, e]));
@@ -193,7 +197,14 @@ function renderVerdict(v) {
       ? `<b>${escapeHtml(v.hits[0].a)}</b> is on Dublin City Council's Record of Protected Structures.`
       : `${v.hits.length} entries on the Record match: ${v.hits.slice(0, 3).map((r) => `<b>${escapeHtml(r.a)}</b>`).join(", ")}${v.hits.length > 3 ? "…" : ""}`;
     // "14 Leeson St" also matches Leeson Street Lower, where 14 isn't listed.
-    const others = streets.filter((s) => s !== hitStreets[0]);
+    // Compare streets by their words so spelling variants ("Stephen's" vs
+    // "Stephen’s") count as one, and skip unnumbered entries (railings,
+    // monuments) and combined addresses ("24 Dawson St/13 St Stephen's Green").
+    const streetKey = (r) => [...r._words].filter((w) => !/\d/.test(w)).sort().join(" ");
+    const hitKey = streetKey(v.hits[0]);
+    const others = [...new Map(v.onStreet
+      .filter((r) => r._nums.size && !r.a.includes("/") && streetKey(r) !== hitKey)
+      .map((r) => [streetKey(r), streetOf(r)])).values()];
     if (others.length) {
       text += ` Not listed on ${others.slice(0, 3).map(escapeHtml).join(", ")}${others.length > 3 ? "…" : ""}.`;
     }
@@ -523,79 +534,90 @@ function toGeoJSON(rows) {
   };
 }
 
-let pendingRows = null;
+// The rows on the map; the source is created from these once the style loads.
+let mapRows = [];
 function updateMapData(rows) {
-  const src = map?.getSource("structures");
-  if (src) src.setData(toGeoJSON(rows));
-  else pendingRows = rows;
+  mapRows = rows;
+  map?.getSource("structures")?.setData(toGeoJSON(rows));
 }
 
 function setZonesVisible(show) {
-  document.getElementById("zone-legend").hidden = !show;
+  document.querySelector("#map-legend .legend-zones").hidden = !show;
   if (!map?.getLayer("zones-fill")) return;
   for (const id of ["zones-fill", "zones-line"]) map.setLayoutProperty(id, "visibility", show ? "visible" : "none");
 }
 
 function initMapLayers() {
-  map.on("load", () => {
-    // Conservation zones sit under the points as a faint wash.
-    map.addSource("zones", { type: "geojson", data: ZONES_URL });
-    const zoneColor = ["match", ["get", "zone"], ...Object.entries(ZONES).flatMap(([z, v]) => [z, v.color]), "#94a3b8"];
-    map.addLayer({
-      id: "zones-fill",
-      type: "fill",
-      source: "zones",
-      paint: { "fill-color": zoneColor, "fill-opacity": 0.1 },
-    });
-    map.addLayer({
-      id: "zones-line",
-      type: "line",
-      source: "zones",
-      paint: {
-        "line-color": zoneColor,
-        "line-opacity": 0.45,
-        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.4, 16, 1.2],
-      },
-    });
-    setZonesVisible(filters.showZones);
+  map.on("style.load", addDataLayers);
 
-    map.addSource("structures", { type: "geojson", data: toGeoJSON(pendingRows || []) });
-    const radius = ["interpolate", ["linear"], ["zoom"], 11, 2, 14, 4, 17, 8];
-    map.addLayer({
-      id: "points",
-      type: "circle",
-      source: "structures",
-      paint: {
-        "circle-radius": radius,
-        "circle-color": ["match", ["get", "era"], ...ERAS.flatMap((e) => [e.id, e.color]), "#94a3b8"],
-        "circle-stroke-color": "#fff",
-        "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 12, 0, 15, 1.2],
-      },
-    });
-    map.addLayer({
-      id: "selected",
-      type: "circle",
-      source: "structures",
-      filter: ["==", ["get", "k"], selectedKey ?? ""],
-      paint: {
-        "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 6, 14, 8, 17, 12],
-        "circle-color": "transparent",
-        "circle-stroke-color": "#0f172a",
-        "circle-stroke-width": 2.5,
-      },
-    });
+  map.on("mouseenter", "points", () => (map.getCanvas().style.cursor = "pointer"));
+  map.on("mouseleave", "points", () => (map.getCanvas().style.cursor = ""));
+  map.on("click", (e) => {
+    if (!map.getLayer("points")) return;
+    // A little slop so the small dots are easy to hit.
+    const box = [[e.point.x - 4, e.point.y - 4], [e.point.x + 4, e.point.y + 4]];
+    const hit = map.queryRenderedFeatures(box, { layers: ["points"] })[0];
+    if (!hit) return closeDetail();
+    const r = rowByKey.get(hit.properties.k);
+    if (r.k === selectedKey) return closeDetail();
+    openDetail(r);
+  });
+}
 
-    map.on("mouseenter", "points", () => (map.getCanvas().style.cursor = "pointer"));
-    map.on("mouseleave", "points", () => (map.getCanvas().style.cursor = ""));
-    map.on("click", (e) => {
-      // A little slop so the small dots are easy to hit.
-      const box = [[e.point.x - 4, e.point.y - 4], [e.point.x + 4, e.point.y + 4]];
-      const hit = map.queryRenderedFeatures(box, { layers: ["points"] })[0];
-      if (!hit) return closeDetail();
-      const r = rowByKey.get(hit.properties.k);
-      if (r.k === selectedKey) return closeDetail();
-      openDetail(r);
-    });
+// Map key: zone swatches, then the era dot colours.
+function renderLegend() {
+  document.querySelector("#map-legend .legend-rows").innerHTML = Object.entries(ZONES).map(([z, v]) =>
+    `<span class="legend-row"><span class="zone-swatch" style="background:${v.color}"></span>${v.label} (${z})</span>`).join("");
+  document.querySelector("#map-legend .legend-eras").innerHTML = ERAS.map((e) =>
+    `<span class="legend-row"><span class="legend-dot" style="background:${e.color}"></span>${e.label}</span>`).join("");
+}
+
+function addDataLayers() {
+  // Conservation zones sit under the points as a faint wash.
+  map.addSource("zones", { type: "geojson", data: ZONES_URL });
+  const zoneColor = ["match", ["get", "zone"], ...Object.entries(ZONES).flatMap(([z, v]) => [z, v.color]), "#94a3b8"];
+  map.addLayer({
+    id: "zones-fill",
+    type: "fill",
+    source: "zones",
+    paint: { "fill-color": zoneColor, "fill-opacity": 0.1 },
+  });
+  map.addLayer({
+    id: "zones-line",
+    type: "line",
+    source: "zones",
+    paint: {
+      "line-color": zoneColor,
+      "line-opacity": 0.45,
+      "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.4, 16, 1.2],
+    },
+  });
+  setZonesVisible(filters.showZones);
+
+  map.addSource("structures", { type: "geojson", data: toGeoJSON(mapRows) });
+  const radius = ["interpolate", ["linear"], ["zoom"], 11, 2, 14, 4, 17, 8];
+  map.addLayer({
+    id: "points",
+    type: "circle",
+    source: "structures",
+    paint: {
+      "circle-radius": radius,
+      "circle-color": ["match", ["get", "era"], ...ERAS.flatMap((e) => [e.id, e.color]), "#94a3b8"],
+      "circle-stroke-color": "#fff",
+      "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 12, 0, 15, 1.2],
+    },
+  });
+  map.addLayer({
+    id: "selected",
+    type: "circle",
+    source: "structures",
+    filter: ["==", ["get", "k"], selectedKey ?? ""],
+    paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 6, 14, 8, 17, 12],
+      "circle-color": "transparent",
+      "circle-stroke-color": "#0f172a",
+      "circle-stroke-width": 2.5,
+    },
   });
 }
 
@@ -682,9 +704,8 @@ function buildControls() {
     setZonesVisible(filters.showZones);
   });
 
-  const legend = document.getElementById("zone-legend");
-  legend.querySelector(".legend-rows").innerHTML = Object.entries(ZONES).map(([z, v]) =>
-    `<span class="legend-row"><span class="zone-swatch" style="background:${v.color}"></span>${v.label} (${z})</span>`).join("");
+  const legend = document.getElementById("map-legend");
+  renderLegend();
   legend.querySelector(".legend-more").addEventListener("click", () => {
     const open = legend.classList.toggle("open");
     legend.querySelector(".legend-more").setAttribute("aria-expanded", String(open));
