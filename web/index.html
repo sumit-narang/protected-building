@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dublin Protected Structures</title>
+
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.9.0/mapbox-gl.css" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main id="map"></main>
+
+  <aside id="sidebar">
+    <!-- Mobile only: the panel becomes a bottom sheet with a tap-to-expand handle -->
+    <button id="sheet-handle" type="button" aria-expanded="false">
+      <span class="grip"></span>
+      <span class="hint">Tap to expand</span>
+    </button>
+
+    <header class="panel-head">
+      <h1>Dublin Protected Structures</h1>
+      <p id="stats">Loading…</p>
+
+      <label class="search-label" for="search">Is my house protected?</label>
+      <div class="search-row">
+        <input id="search" type="search" placeholder="Address, e.g. 5 Mountjoy Sq"
+               autocomplete="off" />
+        <button id="filter-toggle" type="button" aria-expanded="false" aria-controls="filter-panel"
+                aria-label="Filters" title="Filters">
+          <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+            <path d="M3 5.5h14M5.5 10h9M8 14.5h4" fill="none" stroke="currentColor"
+                  stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <span id="filter-count" class="filter-count" hidden></span>
+        </button>
+      </div>
+
+      <!-- Collapsible: grid-rows 0fr -> 1fr animates to the content's natural height -->
+      <div id="filter-panel" class="filter-panel">
+        <div class="filter-panel-inner">
+          <div id="era-filters" class="chips" role="group" aria-label="Built">
+            <!-- chips injected by app.js -->
+          </div>
+
+          <div class="switches">
+            <label class="switch-row"><span>With photo <span id="photo-count" class="count">0</span></span>
+              <input type="checkbox" id="photo-only" role="switch" /></label>
+            <label class="switch-row"><span>National importance <span id="national-count" class="count">0</span></span>
+              <input type="checkbox" id="national-only" role="switch" /></label>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- "Is my house protected?" answer, shown when the search looks like an address -->
+    <section id="verdict" hidden aria-live="polite"></section>
+
+    <div id="list-divider"></div>
+    <ul id="results" class="scrollbar-subtle" aria-label="Protected structures"></ul>
+  </aside>
+
+  <!-- Building detail card, filled in by openDetail() in app.js -->
+  <article id="detail" aria-label="Building details" hidden>
+    <div id="detail-body" class="scrollbar-subtle"></div>
+    <!-- Edge drawn on the same squircle path the body is clipped to; a CSS
+         border would be cut off at the curved corners. -->
+    <svg class="detail-outline" aria-hidden="true"><path /></svg>
+  </article>
+
+  <div id="token-warning" hidden>
+    <div>
+      <h2>Add your Mapbox token</h2>
+      <p>Copy <code>.env.example</code> to <code>.env</code>, paste your public Mapbox token
+         (starts with <code>pk.</code>) into <code>MAPBOX_TOKEN</code>, then run
+         <code>python3 serve.py</code>.</p>
+    </div>
+  </div>
+
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.9.0/mapbox-gl.js"></script>
+  <script src="config.js"></script>
+  <script src="squircle.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
