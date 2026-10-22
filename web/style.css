@@ -345,6 +345,8 @@ html, body {
 
 /* Mapbox sets its own font on its controls */
 .mapboxgl-map, .mapboxgl-ctrl { font-family: inherit; }
+/* Zoom and locate buttons: same soft shadow as the map key, not Mapbox's grey ring */
+.mapboxgl-ctrl-group:not(:empty) { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12); }
 
 /* ---- Building detail card (mirrors the mountains DetailPanel) ----
  * On desktop it floats just above the building's point; app.js sets left/top
