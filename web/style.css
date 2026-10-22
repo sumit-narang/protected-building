@@ -116,7 +116,7 @@ html, body {
 .search-row {
   display: flex;
   gap: 6px;
-  margin-top: 12px;
+  margin-top: 18px;
 }
 
 #search {
@@ -134,7 +134,18 @@ html, body {
   transition: background 200ms, box-shadow 200ms;
 }
 #search::placeholder { color: var(--muted-ink); }
-#search:focus { background: var(--raised); box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35); }
+#search:focus { background: var(--raised); box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35); }
+/* Clear button: the card's close icon instead of Chrome/Safari's default cross */
+#search::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  margin-left: 8px;
+  background: var(--ink-3);
+  -webkit-mask: url(icons/close.svg) center / 12px no-repeat;
+  mask: url(icons/close.svg) center / 12px no-repeat;
+  cursor: pointer;
+}
 
 #filter-toggle {
   position: relative;
@@ -271,6 +282,17 @@ html, body {
   flex: 1;
   min-height: 0;
 }
+
+.sidebar-credit {
+  flex-shrink: 0;
+  padding: 10px 20px 14px;
+  border-top: 1px solid var(--rule);
+  color: var(--muted-ink);
+  font-size: 10px;
+  line-height: 1.4;
+}
+.sidebar-credit a { color: inherit; text-decoration: underline; text-decoration-color: rgba(161, 161, 170, 0.4); }
+.sidebar-credit a:hover { color: var(--ink-3); }
 
 .result {
   display: flex;
