@@ -6,7 +6,6 @@
 
 const DATA_URL = "data/structures.json";
 const DETAIL_SHARDS = 40;  // matches SHARDS in pipeline/build.py
-const RPS_SOURCE_URL = "https://data.smartdublin.ie/dataset/record-protected-structures-dcc";
 
 // Build date comes from the NIAH survey; rows it hasn't covered are "unknown".
 // Bright colours for the light basemap, checked with the dataviz palette
@@ -311,10 +310,6 @@ function detailHtml(r, d) {
   const title = d?.name || r.a.replace(/, Dublin.*$/, "");
   const built = builtLabel(r);
   const parts = allRows.filter((x) => x.id === r.id).length;
-  const links = [
-    d?.url && `<a href="${mapsUrl}" target="_blank" rel="noopener">Google Maps</a>`,
-    `<a href="${RPS_SOURCE_URL}" target="_blank" rel="noopener">RPS data</a>`,
-  ].filter(Boolean).join("");
   const primary = d?.url
     ? `<a class="btn-primary" href="${d.url}" target="_blank" rel="noopener">View on Buildings of Ireland</a>`
     : `<a class="btn-primary" href="${mapsUrl}" target="_blank" rel="noopener">Open in Google Maps</a>`;
@@ -334,28 +329,19 @@ function detailHtml(r, d) {
         </div>
       </div>
       <div class="detail-section">
-        <p class="protected-pill">Protected structure · RPS ${escapeHtml(r.id)}</p>
         ${d?.name ? `<p class="detail-address">${escapeHtml(r.a)}</p>` : ""}
         <p class="detail-desc">On the Record as: ${escapeHtml(r.d)}</p>
         ${parts > 1 ? `<p class="detail-note">One of ${parts} parts of this protected structure.</p>` : ""}
         ${r.z ? `<p class="detail-note"><span class="zone-swatch" style="background:${ZONES[r.z].color}"></span>In a ${ZONES[r.z].label} (${r.z})</p>` : ""}
       </div>
-      ${d && (d.appraisal || d.description) ? `
+      ${d?.appraisal ? `
         <div class="detail-section">
-          ${d.appraisal ? `
-            <p class="detail-desc clamp">${escapeHtml(d.appraisal)}</p>
-            <button class="read-more" type="button" hidden>Read more</button>` : ""}
-          ${d.description ? `
-            <details class="detail-more">
-              <summary>Architectural description</summary>
-              <p class="detail-desc">${escapeHtml(d.description)}</p>
-            </details>` : ""}
-          <p class="detail-note">Source: National Inventory of Architectural Heritage, reg. ${escapeHtml(d.reg_no)}${d.rating ? ` · ${escapeHtml(d.rating)} importance` : ""}</p>
+          <p class="detail-desc clamp">${escapeHtml(d.appraisal)}</p>
+          <button class="read-more" type="button" hidden>Read more</button>
         </div>` : ""}
       <div class="detail-actions">
         ${primary}
-        <div class="detail-links">${links}</div>
-        <div class="credit">${d?.image ? "Photo: NIAH, buildingsofireland.ie" : "Satellite image © Mapbox © Maxar"} · Record: Dublin City Council (CC-BY)</div>
+        ${d?.url ? `<div class="detail-links"><a href="${mapsUrl}" target="_blank" rel="noopener">Google Maps</a></div>` : ""}
       </div>
     </div>`;
 }

@@ -19,8 +19,6 @@
   --body-ink: #475569;                 /* card description text */
   --section-rule: rgba(226, 232, 240, 0.6);
   --placeholder: #f1f5f9;              /* card photo while loading */
-  --pill-bg: rgba(22, 163, 74, 0.12);
-  --pill-ink: #15803d;
   --link: var(--blue);
   --blue: #2563eb;
   --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
@@ -71,8 +69,6 @@ html, body {
   --body-ink: #d4d4d8;
   --section-rule: rgba(255, 255, 255, 0.08);
   --placeholder: #27272a;
-  --pill-bg: rgba(74, 222, 128, 0.14);
-  --pill-ink: #4ade80;
   --link: #60a5fa;
   color-scheme: dark;   /* native bits (search clear button) go dark too */
 }
@@ -508,13 +504,6 @@ html, body {
   transition: background 150ms;
 }
 .detail-links a:hover { background: var(--fill-strong); }
-.credit {
-  margin-top: 10px;
-  color: var(--muted-ink);
-  font-size: 10px;
-  line-height: 1.3;
-  word-break: break-word;
-}
 
 /* ---- Token warning ---- */
 #token-warning {
@@ -601,26 +590,8 @@ html, body {
 }
 .result.selected .era-dot { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.6); }
 
-.protected-pill {
-  display: inline-block;
-  margin: 0 0 8px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--pill-bg);
-  color: var(--pill-ink);
-  font-size: 11px;
-  font-weight: 600;
-}
 .detail-address { margin: 0 0 4px; color: var(--ink-2); font-size: 13px; font-weight: 600; }
 .detail-section .detail-desc + .detail-desc { margin-top: 8px; }
-.detail-more { margin-top: 10px; }
-.detail-more summary {
-  cursor: pointer;
-  color: var(--ink-3);
-  font-size: 12px;
-  font-weight: 600;
-}
-.detail-more .detail-desc { margin-top: 6px; }
 .detail-desc.clamp {
   display: -webkit-box;
   -webkit-box-orient: vertical;
