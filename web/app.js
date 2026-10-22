@@ -511,6 +511,7 @@ function initMap() {
     style: window.APP_CONFIG.MAP_STYLE,
     center: [-6.262, 53.343],  // Dublin city centre
     zoom: 12.3,
+    logoPosition: "bottom-right",  // bottom-left sits under the sidebar
   });
   // Keep the map's centre (and flyTo targets) clear of the floating panel.
   if (!mobileQuery.matches) map.setPadding({ left: 18 * 16 + 12 });

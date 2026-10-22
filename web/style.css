@@ -47,9 +47,10 @@ html, body {
 #map { position: absolute; inset: 0; }
 
 /* ---- Dark glass panels over the light map ----
- * The sidebar and the building card redefine the colour tokens. */
+ * The sidebar, the building card and the map key redefine the colour tokens. */
 #sidebar,
-#detail {
+#detail,
+#map-legend {
   --glass: rgba(24, 24, 27, 0.9);
   --glass-border: rgba(255, 255, 255, 0.08);
   --ink: #f4f4f5;
@@ -515,12 +516,12 @@ html, body {
 .detail-links a {
   flex: 1;
   padding: 8px 10px;
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--fill);
   color: var(--ink-3);
   text-align: center;
   text-decoration: none;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   white-space: nowrap;
   transition: background 150ms;
@@ -639,14 +640,13 @@ html, body {
   height: 10px;
   margin-right: 6px;
   border-radius: 3px;
-  opacity: 0.7;
   vertical-align: -1px;
 }
 
 #map-legend {
   position: absolute;
   left: calc(12px + 18rem + 12px);
-  bottom: 28px;
+  bottom: 12px;
   z-index: 4;
   max-width: 300px;
   padding: 10px 12px;
@@ -669,7 +669,7 @@ html, body {
 #map-legend .legend-zones:not([hidden]) + .legend-eras {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid rgba(15, 23, 42, 0.1);
+  border-top: 1px solid var(--divider);
 }
 .legend-dot {
   display: inline-block;
@@ -685,7 +685,7 @@ html, body {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--blue);
+  color: var(--link);
   font: inherit;
   font-size: 11px;
   font-weight: 600;
@@ -699,4 +699,6 @@ html, body {
   /* The bottom sheet owns the bottom of the screen; sit the key top-left. */
   #map-legend { left: 12px; top: 12px; bottom: auto; max-width: calc(100vw - 80px); }
   body.detail-open #map-legend { display: none; }
+  /* Keep the Mapbox logo and credits above the collapsed bottom sheet */
+  .mapboxgl-ctrl-bottom-right { bottom: 168px; }
 }
