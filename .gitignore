@@ -1,5 +1,9 @@
 # Secrets — never commit your real token
 .env
+.env.production
+
+# Production bundle built by deploy.sh (holds config.js with the production token)
+dist/
 
 # Generated from .env by serve.py
 web/config.js
