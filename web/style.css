@@ -284,17 +284,6 @@ html, body {
   min-height: 0;
 }
 
-.sidebar-credit {
-  flex-shrink: 0;
-  padding: 10px 20px 14px;
-  border-top: 1px solid var(--rule);
-  color: var(--muted-ink);
-  font-size: 10px;
-  line-height: 1.4;
-}
-.sidebar-credit a { color: inherit; text-decoration: underline; text-decoration-color: rgba(161, 161, 170, 0.4); }
-.sidebar-credit a:hover { color: var(--ink-3); }
-
 .result {
   display: flex;
   align-items: center;
@@ -366,6 +355,8 @@ html, body {
 .mapboxgl-map, .mapboxgl-ctrl { font-family: inherit; }
 /* Zoom and locate buttons: same soft shadow as the map key, not Mapbox's grey ring */
 .mapboxgl-ctrl-group:not(:empty) { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12); }
+/* Credits (i) button: Mapbox's own icon, in grey rather than black */
+.mapboxgl-ctrl-attrib-button { background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg' fill-rule='evenodd' fill='%23666'%3E%3Cpath d='M4 10a6 6 0 1 0 12 0 6 6 0 1 0-12 0m5-3a1 1 0 1 0 2 0 1 1 0 1 0-2 0m0 3a1 1 0 1 1 2 0v3a1 1 0 1 1-2 0'/%3E%3C/svg%3E") !important; }
 
 /* ---- Building detail card (mirrors the mountains DetailPanel) ----
  * On desktop it floats just above the building's point; app.js sets left/top
@@ -555,6 +546,8 @@ html, body {
 
 /* ---- Mobile: the panel becomes a bottom sheet ---- */
 @media (max-width: 767px) {
+  /* Collapsed sheet shows the handle, title and count; search is a tap away */
+  :root { --sheet-peek: 108px; }
   #sidebar {
     position: fixed;
     top: auto;
@@ -566,7 +559,7 @@ html, body {
     background: var(--sheet-glass);
     border-bottom: 0;
     border-radius: 28px 28px 0 0;
-    transform: translateY(calc(72vh - 168px));
+    transform: translateY(calc(72vh - var(--sheet-peek)));
     transition: transform 300ms var(--ease-ios);
     will-change: transform;
   }
@@ -698,12 +691,11 @@ html, body {
 }
 #map-legend .legend-text { display: none; margin: 6px 0 0; font-size: 11px; line-height: 15px; color: var(--muted-ink); }
 #map-legend.open .legend-text { display: block; }
-#map-legend.open .legend-more { display: none; }
 
 @media (max-width: 767px) {
   /* The bottom sheet owns the bottom of the screen; sit the key top-left. */
   #map-legend { left: 12px; top: 12px; bottom: auto; max-width: calc(100vw - 80px); }
   body.detail-open #map-legend { display: none; }
   /* Keep the Mapbox logo and credits above the collapsed bottom sheet */
-  .mapboxgl-ctrl-bottom-right { bottom: 168px; }
+  .mapboxgl-ctrl-bottom-right { bottom: var(--sheet-peek); }
 }

@@ -519,7 +519,17 @@ function initMap() {
     center: [-6.262, 53.343],  // Dublin city centre
     zoom: 12.3,
     logoPosition: "bottom-right",  // bottom-left sits under the sidebar
+    attributionControl: false,
   });
+  // Our data credits join Mapbox's, folded into its (i) button on every screen.
+  map.addControl(new mapboxgl.AttributionControl({
+    compact: true,
+    customAttribution: [
+      '<a href="https://data.smartdublin.ie/dataset/record-protected-structures-dcc" target="_blank" rel="noopener">© Dublin City Council</a>',
+      '<a href="https://www.buildingsofireland.ie" target="_blank" rel="noopener">© NIAH</a>',
+      "© Maxar",
+    ],
+  }), "bottom-right");
   // Keep the map's centre (and flyTo targets) clear of the floating panel.
   if (!mobileQuery.matches) map.setPadding({ left: 18 * 16 + 12 });
   map.addControl(new mapboxgl.NavigationControl(), "top-right");
@@ -597,9 +607,11 @@ function buildControls() {
 
   const legend = document.getElementById("map-legend");
   renderLegend();
-  legend.querySelector(".legend-more").addEventListener("click", () => {
+  const legendMore = legend.querySelector(".legend-more");
+  legendMore.addEventListener("click", () => {
     const open = legend.classList.toggle("open");
-    legend.querySelector(".legend-more").setAttribute("aria-expanded", String(open));
+    legendMore.setAttribute("aria-expanded", String(open));
+    legendMore.textContent = open ? "See less" : "What's this?";
   });
 
   let t;
