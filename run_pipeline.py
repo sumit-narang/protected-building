@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dublin Protected Structures — data pipeline orchestrator.
+"""Dublin's Protected Buildings — data pipeline orchestrator.
 
 Stages:
   1. fetch     — download DCC's Record of Protected Structures (CSV)

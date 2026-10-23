@@ -1,4 +1,4 @@
-/* Dublin Protected Structures — Mapbox GL JS frontend.
+/* Dublin's Protected Buildings — Mapbox GL JS frontend.
  * Reads the pipeline output (data/structures.json), draws every protected
  * structure as a point coloured by when it was built, with a searchable,
  * filterable list and a detail card per building.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dev server for the Dublin Protected Structures web UI.
+"""Dev server for the Dublin's Protected Buildings map.
 
 Reads your Mapbox token from `.env`, writes it into `web/config.js`, then serves
 the project over HTTP so the page can fetch the data files.

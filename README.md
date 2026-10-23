@@ -1,4 +1,4 @@
-# Dublin Protected Structures
+# Dublin's Protected Buildings
 
 A map of every building on Dublin City Council's Record of Protected Structures
 (RPS), with build dates, photos and history from the National Inventory of
