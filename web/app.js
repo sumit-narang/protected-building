@@ -303,10 +303,16 @@ function builtLabel(r) {
   return r.y ? `c.${r.y}` : null;
 }
 
+// NIAH types run long ("bank/financial institution", "shop/retail outlet,
+// apartment/flat (purpose-built)"); the badge keeps the first name only.
+function shortType(t) {
+  return capitalise(t.split(/[\/,(]/)[0].replace(/\bmisc$/, "").trim());
+}
+
 function detailHtml(r, d) {
   const [lon, lat] = r.ll;
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
-  const type = d?.original_type ? capitalise(d.original_type) : "Protected structure";
+  const type = d?.original_type ? shortType(d.original_type) : "Protected structure";
   const title = d?.name || r.a.replace(/, Dublin.*$/, "");
   const built = builtLabel(r);
   const parts = allRows.filter((x) => x.id === r.id).length;
@@ -331,6 +337,7 @@ function detailHtml(r, d) {
       <div class="detail-section">
         ${d?.name ? `<p class="detail-address">${escapeHtml(r.a)}</p>` : ""}
         <p class="detail-desc">On the Record as: ${escapeHtml(r.d)}</p>
+        ${d?.original_type && shortType(d.original_type) !== capitalise(d.original_type) ? `<p class="detail-desc">Built as: ${escapeHtml(capitalise(d.original_type).replace(/\s*\/\s*/g, " / "))}</p>` : ""}
         ${parts > 1 ? `<p class="detail-note">One of ${parts} parts of this protected structure.</p>` : ""}
         ${r.z ? `<p class="detail-note"><span class="zone-swatch" style="background:${ZONES[r.z].color}"></span>In a ${ZONES[r.z].label} (${r.z})</p>` : ""}
       </div>

@@ -462,6 +462,11 @@ html, body {
 .hero-title { min-width: 0; }
 .hero-badge {
   display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: top;
   margin-bottom: 6px;
   padding: 2px 8px;
   border-radius: 999px;
